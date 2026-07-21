@@ -1,0 +1,19 @@
+# Environments
+.venv/
+env/
+__pycache__/
+*.py[cod]
+.python-version
+
+# Datasets & Heavy files
+datasets/
+*.zip
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# IDEs & OS
+.DS_Store
+.vscode/
+.idea/

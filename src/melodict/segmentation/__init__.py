@@ -1,0 +1,1 @@
+"""Real-time melodic phrase segmentation and boundary detection algorithms."""

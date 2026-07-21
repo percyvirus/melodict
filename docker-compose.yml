@@ -1,0 +1,18 @@
+services:
+  melodict-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: melodict:latest
+    container_name: melodict_core
+    # Host networking is crucial for ultra-low latency UDP/OSC audio triggers
+    network_mode: "host"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OSC_RECEIVE_PORT=8001
+      - OSC_SEND_PORT=8000
+    volumes:
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./datasets:/app/datasets
+    restart: unless-stopped

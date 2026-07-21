@@ -1,0 +1,44 @@
+[project]
+name = "melodict"
+version = "0.1.0"
+description = "Real-time symbolic melody extraction, phrase segmentation, and dictionary generation for interactive music systems."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "Percy Wilberth Bonett Mendoza", email = "percy96bm@gmail.com" }
+]
+keywords = ["music-information-retrieval", "osc", "max-msp", "melody-extraction", "jazz-ai", "real-time"]
+dependencies = [
+    "python-osc>=1.8.3",
+    "numpy>=1.26.0,<2.0.0",
+    "scipy>=1.13.0",
+    "librosa>=0.10.2",
+    "mido>=1.3.2",
+    "setuptools>=65.0.0,<70.0.0",
+    "scikit-learn>=1.3.0,<1.5.1",
+    "basic-pitch>=0.3.0",
+    "onnxruntime>=1.17.0",
+    "torch>=2.2.0,<=2.7.0",
+    "torchaudio>=2.2.0,<=2.7.0",
+    "torchcrepe>=0.0.23",
+    "resampy>=0.2.2,<0.4.3",
+    "essentia>=2.0.1",
+    "soundfile>=0.12.1",
+    "mir-eval>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+    "black>=24.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

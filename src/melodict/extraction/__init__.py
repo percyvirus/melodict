@@ -1,0 +1,1 @@
+"""Melody extraction and pitch tracking module."""
