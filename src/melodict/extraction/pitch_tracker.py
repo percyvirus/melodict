@@ -1,54 +1,53 @@
-"""Standard acoustic pitch tracking and MIDI estimation utilities."""
+"""Real-time pitch tracking bridge connecting incoming OSC audio buffers to SOTA extraction engines."""
 
+import logging
 from typing import Any, List, Optional
 import numpy as np
 
+from melodict.extraction.sota_models import EngineFactory, PitchExtractorEngine
+
+logger = logging.getLogger("MelodictPitchTracker")
+
 
 class PitchTracker:
-    """Low-latency fundamental frequency (F0) to MIDI pitch tracker."""
+    """Manages audio buffer conversion from OSC network packets and executes symbolic pitch prediction."""
 
-    def __init__(self, min_freq: float = 60.0, max_freq: float = 2000.0) -> None:
+    def __init__(self, engine_name: str = "essentia-yin") -> None:
         """
-        Initialize the pitch tracker with frequency bounds.
+        Initialize the pitch tracker with a specific SOTA engine.
         
         Args:
-            min_freq: Minimum frequency in Hz (replaces the legacy 60Hz filter).
-            max_freq: Maximum detectable frequency in Hz.
+            engine_name: The target engine ('essentia-yin', 'crepe', 'pyin', or 'basic-pitch').
         """
-        self.min_freq = min_freq
-        self.max_freq = max_freq
-        self.last_note: Optional[int] = None
+        self.engine_name = engine_name
+        self.engine: Optional[PitchExtractorEngine] = EngineFactory.create(engine_name)
+        if not self.engine:
+            logger.error(f"Failed to load engine '{engine_name}'. Falling back to pyin.")
+            self.engine = EngineFactory.create("pyin")
 
-    def freq_to_midi(self, freq: float) -> Optional[int]:
-        """Convert frequency in Hertz to the nearest MIDI note number."""
-        if freq < self.min_freq or freq > self.max_freq:
-            return None
-        midi_float = 69.0 + 12.0 * np.log2(freq / 440.0)
-        return int(np.round(midi_float))
-
-    def estimate_pitch(self, audio_features: List[Any]) -> Optional[int]:
+    def estimate_pitch(self, audio_args: List[Any], sample_rate: int = 44100) -> Optional[int]:
         """
-        Estimate MIDI pitch from incoming feature vectors (e.g., FFT bins or Aubio outputs).
+        Convert raw OSC float lists from Max/MSP into PCM arrays and predict the MIDI note.
         
         Args:
-            audio_features: List containing numerical audio representations from OSC.
+            audio_args: Sequence of float values received from the UDP network bundle.
+            sample_rate: Audio sampling rate matching the Max/MSP DSP settings.
             
         Returns:
-            Estimated MIDI note number or None if silence/unvoiced.
+            Estimated symbolic MIDI note integer, or None if unvoiced/silence.
         """
-        if not audio_features:
+        if not audio_args or not self.engine:
             return None
 
-        # Extract the primary frequency (assuming first argument is fundamental frequency from Max)
         try:
-            raw_val = float(audio_features[0])
-            # If Max sends frequency directly (e.g., from aubiopitch~)
-            if raw_val > 0:
-                midi_note = self.freq_to_midi(raw_val)
-                if midi_note != self.last_note:
-                    self.last_note = midi_note
-                    return midi_note
-        except (ValueError, TypeError):
-            return None
+            # Convert OSC network float sequence to a standard 1D NumPy PCM buffer
+            audio_buffer = np.array(audio_args, dtype=np.float32)
             
-        return None
+            # Check for absolute silence or flatline signal to save CPU cycles
+            if np.max(np.abs(audio_buffer)) < 0.01:
+                return None
+                
+            return self.engine.predict_frame(audio_buffer, sample_rate=sample_rate)
+        except Exception as e:
+            logger.error(f"Error during live pitch estimation: {e}")
+            return None

@@ -3,6 +3,7 @@
 import argparse
 import logging
 import time
+from melodict.utils.session_recorder import SessionRecorder
 from typing import Any, List
 from pythonosc import dispatcher, osc_server, udp_client
 
@@ -36,6 +37,8 @@ class OSCBridge:
         self.dispatcher.map("/audio/features", self._handle_audio_features)
         self.dispatcher.map("/midi/note_in", self._handle_midi_in)
         self.dispatcher.set_default_handler(self._default_handler)
+        
+        self.recorder = SessionRecorder(output_dir="recordings")
 
     def _handle_audio_features(self, address: str, *args: List[Any]) -> None:
         """Process incoming raw audio feature frames from Max/MSP."""
@@ -78,6 +81,8 @@ class OSCBridge:
             
             logger.info(f"Musician played: {last_phrase} -> AI Answer: {response_phrase}")
             
+            self.recorder.log_phrase("Melodict_AI", response_phrase)
+            
             # 4. Dispatch the generated response sequence to Max/MSP
             # Sending as a list to let Max/MSP sequence the rhythm, or trigger individual notes
             for idx, resp_note in enumerate(response_phrase):
@@ -98,6 +103,7 @@ class OSCBridge:
             logger.info("OSC Server stopped by user.")
         finally:
             server.server_close()
+            self.recorder.export_midi_file("session_export.mid")
 
 
 def main() -> None:
