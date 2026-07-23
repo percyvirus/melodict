@@ -1,9 +1,9 @@
-# Melodict 🎹📈
+# Melodict
 
 **Real-time symbolic melody extraction, phrase segmentation, and dictionary generation for interactive music systems.**
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Managed with uv](https://img.shields.io/badge/managed%20with-uv-purple.svg)](https://github.com/astral-sh/uv)
 
 ## Overview
@@ -64,4 +64,4 @@ Run an offline segmentation evaluation:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+**All rights reserved.** This software and associated documentation files are proprietary and intended solely for academic research and evaluation purposes. No public licensing, commercial reuse, modification, or unauthorized distribution is permitted without explicit written consent from the author.

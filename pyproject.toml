@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Real-time symbolic melody extraction, phrase segmentation, and dictionary generation for interactive music systems."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-license = { text = "MIT" }
+license = { text = "Proprietary" }
 authors = [
     { name = "Percy Wilberth Bonett Mendoza", email = "percy96bm@gmail.com" }
 ]

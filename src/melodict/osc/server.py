@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import threading
 import time
 from melodict.utils.session_recorder import SessionRecorder
 from typing import Any, List
@@ -81,12 +82,15 @@ class OSCBridge:
             
             logger.info(f"Musician played: {last_phrase} -> AI Answer: {response_phrase}")
             
-            self.recorder.log_phrase("Melodict_AI", response_phrase)
-            
-            # 4. Dispatch the generated response sequence to Max/MSP
-            # Sending as a list to let Max/MSP sequence the rhythm, or trigger individual notes
-            for idx, resp_note in enumerate(response_phrase):
-                self.client.send_message("/midi/ai_answer", [resp_note, idx])
+            # 4. Dispatch the generated response sequence to Max/MSP rhythmically
+            # We spawn a background daemon thread so the delay doesn't block incoming OSC audio frames
+            def send_sequenced_response(phrase: List[int]) -> None:
+                for idx, resp_note in enumerate(phrase):
+                    self.client.send_message("/midi/ai_answer", [resp_note, idx])
+                    # Wait 200ms between notes to create a melodic phrase
+                    time.sleep(0.2)
+
+            threading.Thread(target=send_sequenced_response, args=(response_phrase,), daemon=True).start()
 
     def _default_handler(self, address: str, *args: List[Any]) -> None:
         logger.debug(f"Received unmapped OSC message: {address}: {args}")
