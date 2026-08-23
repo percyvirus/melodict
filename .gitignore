@@ -18,3 +18,7 @@ recordings/
 .DS_Store
 .vscode/
 .idea/
+
+# Evaluation outputs and plots
+/*.png
+/*.csv

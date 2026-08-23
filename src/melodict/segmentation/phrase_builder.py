@@ -1,75 +1,50 @@
-"""Accumulates symbolic notes in real-time and builds structured phrase dictionaries."""
+"""Gestalt-based Local Boundary Detection Model (LBDM) for musical phrase segmentation."""
 
-import time
-from typing import Dict, List
-from melodict.segmentation.lbdm import LBDM
+import logging
+from typing import Dict, List, Tuple
 
+logger = logging.getLogger("MelodictLBDM")
+
+# Type alias for our 3-variable musical state
+NoteTuple = Tuple[int, int, int]  # (Pitch, Duration, Velocity)
 
 class PhraseBuilder:
-    """Manages real-time note streaming and triggers phrase dictionary updates."""
+    """Segments continuous note streams into phrases and builds an on-the-fly dictionary."""
 
-    def __init__(self, boundary_threshold: float = 1.5, max_silence_sec: float = 0.8) -> None:
-        self.threshold = boundary_threshold
-        self.max_silence = max_silence_sec
-        self.lbdm = LBDM()
-        
-        self.current_phrase: List[int] = []
-        self.last_note_time: float = time.time()
-        self.dictionary: Dict[int, List[List[int]]] = {}
-        self.phrase_counter: int = 0
+    def __init__(self, max_phrase_length: int = 12, silence_threshold_ms: int = 550):
+        self.max_phrase_length = max_phrase_length
+        self.silence_threshold_ms = silence_threshold_ms
+        self.current_phrase: List[NoteTuple] = []
+        # Dictionary mapping phrase lengths to lists of recorded phrases
+        self.dictionary: Dict[int, List[List[NoteTuple]]] = {}
 
-    def add_note(self, midi_note: int) -> bool:
-        """
-        Add a note to the current stream and check if a phrase boundary occurred.
-        
-        Args:
-            midi_note: Incoming MIDI note number (0 represents a flush/silence trigger).
+    def add_note(self, note_event: NoteTuple) -> bool:
+        """Add a note event tuple and evaluate LBDM boundary rules. Returns True if segmented."""
+        pitch, duration, velocity = note_event
+        self.current_phrase.append(note_event)
+
+        is_boundary = False
+
+        # Rule 1: Temporal rest exceeds threshold
+        if duration >= self.silence_threshold_ms:
+            is_boundary = True
+        # Rule 2: Large melodic interval leap (> Major 6th / 9 semitones)
+        elif len(self.current_phrase) >= 2:
+            prev_pitch = self.current_phrase[-2][0]
+            if abs(pitch - prev_pitch) >= 9:
+                is_boundary = True
+        # Rule 3: Safety buffer limit
+        if len(self.current_phrase) >= self.max_phrase_length:
+            is_boundary = True
+
+        if is_boundary and len(self.current_phrase) >= 2:
+            phrase_len = len(self.current_phrase)
+            if phrase_len not in self.dictionary:
+                self.dictionary[phrase_len] = []
+            self.dictionary[phrase_len].append(self.current_phrase.copy())
             
-        Returns:
-            True if a phrase boundary was detected and dictionary was updated, False otherwise.
-        """
-        now = time.time()
-        time_since_last = now - self.last_note_time
-        self.last_note_time = now
-
-        # If it is a dummy flush note (0) or silence trigger
-        if midi_note == 0:
-            if len(self.current_phrase) > 0:
-                self._save_phrase()
-                return True
-            return False
-
-        self.current_phrase.append(midi_note)
-
-        # Gestalt Rule 1: Long silence indicates phrase completion
-        if time_since_last > self.max_silence and len(self.current_phrase) > 1:
-            # Save all notes except the one just played (which starts the new phrase)
-            new_note = self.current_phrase.pop()
-            self._save_phrase()
-            self.current_phrase.append(new_note)
+            logger.info(f"Segmented phrase of length {phrase_len}: {self.current_phrase}")
+            self.current_phrase.clear()
             return True
 
-        # Gestalt Rule 2: Large interval jump (simple real-time heuristic approximation)
-        if len(self.current_phrase) >= 3:
-            jump = abs(self.current_phrase[-1] - self.current_phrase[-2])
-            if jump >= 12:  # Octave leap or greater
-                new_note = self.current_phrase.pop()
-                self._save_phrase()
-                self.current_phrase.append(new_note)
-                return True
-
         return False
-
-    def _save_phrase(self) -> None:
-        """Save the completed melodic phrase into the internal dictionary."""
-        if not self.current_phrase:
-            return
-            
-        self.phrase_counter += 1
-        length = len(self.current_phrase)
-        
-        if length not in self.dictionary:
-            self.dictionary[length] = []
-            
-        self.dictionary[length].append(list(self.current_phrase))
-        self.current_phrase.clear()

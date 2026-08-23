@@ -8,11 +8,16 @@
 
 ## Overview
 
-**Melodict** bridges the gap between raw audio capture (via Max/MSP or live instruments like piano and guitar) and symbolic AI generation. Designed to overcome traditional FFT filtering delays and legacy pitch-tracking bottlenecks (e.g., Skyline algorithm), Melodict provides an ultra-low-latency Open Sound Control (OSC) pipeline that:
+**Melodict** bridges the gap between raw audio capture (via Max/MSP or live instruments like piano and guitar) and symbolic AI generation. Designed to overcome traditional FFT filtering delays and legacy pitch-tracking bottlenecks, Melodict provides an ultra-low-latency Open Sound Control (OSC) pipeline that:
 
-1. **Extracts** symbolic pitch and MIDI events in real-time using State-of-the-Art (SOTA) lightweight neural networks and acoustic feature trackers.
-2. **Segments** continuous melodic streams into natural musical phrases using Gestalt-based heuristic models (Local Boundary Detection Model - LBDM).
-3. **Builds** structured phrase dictionaries on the fly, enabling reactive AI accompaniment and continuation models (e.g., Variable-order Markov Models / Factor Oracles).
+1. **Extracts** symbolic pitch and MIDI events in real-time using State-of-the-Art (SOTA) neural networks and acoustic trackers.
+2. **Segments** continuous melodic streams into natural musical phrases using Gestalt-based heuristic models (LBDM).
+3. **Builds** structured phrase dictionaries on the fly, enabling reactive AI accompaniment.
+
+### Phase 1: Real-Time Melody Extraction Breakthroughs
+During our initial evaluation phase on the MAESTRO (Piano) and GuitarSet datasets, we implemented two critical architectural improvements:
+* **Smart Skyline Ground Truth:** We enhanced the traditional Skyline algorithm with offline contextual windowing to detect and filter out "bass bleeding" during melodic rests, providing a mathematically pure Ground Truth for evaluations.
+* **Asymmetric Sliding Window:** To solve the latency vs. context dilemma, we wrapped Convolutional Neural Networks (like Spotify's `basic-pitch`) in a 2.0-second historical circular buffer. The audio advances in ultra-fast 46 ms increments, allowing the CNN to utilize deep polyphonic context while delivering zero-perceived-latency updates to the musician.
 
 ## Architecture
 
@@ -23,7 +28,7 @@
 ## Quick Start
 
 ### 1. Prerequisites
-* uv (https://github.com/astral-sh/uv - for local Python dependency management)
+* uv ([https://github.com/astral-sh/uv](https://github.com/astral-sh/uv) - for local Python dependency management)
 * Docker & Docker Compose (optional, for containerized execution)
 * Cycling '74 Max/MSP (for live audio capture and synthesis)
 
@@ -31,7 +36,7 @@
 
 Clone the repository and sync dependencies instantly:
 
-    git clone https://github.com/yourusername/melodict.git
+    git clone [https://github.com/yourusername/melodict.git](https://github.com/yourusername/melodict.git)
     cd melodict
     uv sync
 
@@ -45,22 +50,32 @@ To run the engine in an isolated environment with host networking (zero UDP port
 
     docker compose up --build
 
-## Testing with Datasets (Piano & Guitar)
+## Testing & Evaluation Scripts
 
-To benchmark pitch-tracking accuracy and segmentation boundaries against academic ground-truths, use our automated downloader:
+To benchmark pitch-tracking accuracy against academic ground-truths, use our automated tools:
 
-    uv run python scripts/download_datasets.py --target all
+Download datasets (MAESTRO & GuitarSet):
 
-Run an offline segmentation evaluation:
+    uv run python scripts/download_datasets.py --target all --mode full
 
-    uv run python scripts/simulate_live_stream.py --dataset wjazzd --speed 1.0
+Run the Grid Search to find the optimal Latency/Context ratio for Neural Networks:
+
+    uv run python scripts/optimize_basic_pitch.py --data_dir /path/to/maestro --max_files 10 --duration 15.0
+
+Visualize predictions vs. Ground Truth on a Piano Roll:
+
+    uv run python scripts/visualize_melody.py --audio_file /path/to/audio.wav --buffer_ms 46 --context_sec 2.0
+
+Evaluate algorithms specifically on Guitar audio (Acoustic Mic vs. Line-In Hexaphonic):
+
+    uv run python scripts/evaluate_guitarset.py --data_dir /path/to/guitarset --audio_type mic
 
 ## Max/MSP Integration
 
-1. Open max_msp/osc_bridge.maxpat in Max 8 or later.
-2. Connect your audio interface input (microphone or guitar instrument cable) to the adc~ object.
-3. Ensure the UDP send port is set to 8001 and receive port is set to 8000.
-4. Turn on DSP to begin streaming audio features and receiving segmented symbolic phrases.
+1. Open `max_msp/melodict_osc_bridge.maxpat` in Max 8 or later.
+2. Connect your audio interface input (microphone or guitar instrument cable) to the `ezadc~` object.
+3. Ensure the UDP send port is set to `8001` and receive port is set to `8000`.
+4. Turn on DSP to begin streaming audio features.
 
 ## License
 
