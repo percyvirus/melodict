@@ -13,6 +13,7 @@ recordings/
 *.mp3
 *.flac
 *.ogg
+*.mid
 
 # IDEs & OS
 .DS_Store
