@@ -187,7 +187,7 @@ def main():
     
     if len(df_metrics) > 0:
         print("\n" + "="*70)
-        print(f"🎸 GUITARSET LEADERBOARD (Audio: {args.audio_type.upper()} | Buffer: 46ms | Context: 2.0s) 🎸")
+        print(f"GUITARSET LEADERBOARD (Audio: {args.audio_type.upper()} | Buffer: 46ms | Context: 2.0s)")
         print("="*70)
         
         summary = (

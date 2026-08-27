@@ -2,11 +2,11 @@
 
 import argparse
 import time
-from typing import List, Tuple
+
 from melodict.segmentation.phrase_builder import PhraseBuilder
 
 
-def get_test_melody() -> List[Tuple[int, float]]:
+def get_test_melody() -> list[tuple[int, float]]:
     """
     Generate a synthetic melodic stream with distinct musical phrases.
     Returns a list of tuples: (MIDI Note Number, Duration in seconds before next note).
@@ -32,19 +32,27 @@ def run_simulation(speed_multiplier: float = 1.0, threshold: float = 1.5) -> Non
     """Run the live symbolic stream simulation and monitor dictionary generation."""
     print(f"\n--- Melodict Symbolic Phrase Segmentation Test (Speed: {speed_multiplier}x) ---")
     print("Simulating live MIDI stream from instrument...")
-    print("Listening for Gestalt boundaries (Rests > 0.8s or Pitch Leaps >= 12 semitones)...\n")
+    print("Listening for Gestalt boundaries (Rests > 0.8s or Pitch Leaps >= 9 semitones)...\n")
 
-    builder = PhraseBuilder(boundary_threshold=threshold, max_silence_sec=0.8)
-    melody = get_test_melody()
+    # Connect to the actual PhraseBuilder initialization parameters
+    # We dynamically calculate the silence threshold in ms based on the speed multiplier
+    silence_thresh_ms = int(800 / speed_multiplier)
+    builder = PhraseBuilder(max_phrase_length=12, silence_threshold_ms=silence_thresh_ms)
     
+    melody = get_test_melody()
     start_time = time.time()
-    for i, (note, duration) in enumerate(melody, 1):
+    
+    for note, duration in melody:
         elapsed = time.time() - start_time
         freq_hz = 440.0 * (2.0 ** ((note - 69) / 12.0))
         print(f"[{elapsed:05.2f}s] Note Played: MIDI {note} ({freq_hz:.1f} Hz)")
 
-        # Feed note to the live segmenter
-        boundary_detected = builder.add_note(note)
+        # Convert duration to milliseconds and add a mock velocity of 100
+        # PhraseBuilder expects NoteTuple: (Pitch, Duration_ms, Velocity)
+        note_event = (note, int(duration * 1000), 100)
+        
+        # Feed the tuple to the live segmenter
+        boundary_detected = builder.add_note(note_event)
         
         if boundary_detected:
             print("          |---> BOUNDARY DETECTED! Phrase sliced and saved to Dictionary.")
@@ -54,7 +62,9 @@ def run_simulation(speed_multiplier: float = 1.0, threshold: float = 1.5) -> Non
 
     # Force a final boundary check for any remaining notes in the buffer
     time.sleep(1.0 / speed_multiplier)
-    builder.add_note(0)  # Dummy silent note to flush buffer
+    
+    # Dummy silent note to flush buffer (pitch 0, duration 1000ms, velocity 0)
+    builder.add_note((0, 1000, 0))
 
     print("\n--- Final Generated Phrase Dictionary ---")
     if not builder.dictionary:
@@ -67,10 +77,14 @@ def run_simulation(speed_multiplier: float = 1.0, threshold: float = 1.5) -> Non
     print("-" * 55 + "\n")
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser(description="Test Melodict phrase segmentation.")
     parser.add_argument("--speed", type=float, default=1.0, help="Playback speed multiplier.")
-    parser.add_argument("--threshold", type=float, default=1.5, help="LBDM sensitivity threshold.")
+    parser.add_argument("--threshold", type=float, default=1.5, help="LBDM sensitivity threshold (informational).")
     args = parser.parse_args()
 
     run_simulation(args.speed, args.threshold)
+
+
+if __name__ == "__main__":
+    main()

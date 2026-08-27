@@ -1,6 +1,7 @@
 """Simulate an interactive call-and-response jazz session using the VMM Continuator."""
 
 import time
+
 from melodict.generation.continuator import VMMContinuator
 
 

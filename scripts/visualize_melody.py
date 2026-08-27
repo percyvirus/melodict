@@ -8,9 +8,9 @@ from pathlib import Path
 
 import librosa
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 import numpy as np
 import pretty_midi
+from matplotlib.lines import Line2D
 from scipy.ndimage import maximum_filter1d
 from scipy.signal import medfilt
 
@@ -130,7 +130,7 @@ def plot_melody_comparison(
     max_duration: float = 10.0, 
     buffer_ms: int = 46, 
     context_sec: float = 1.0, 
-    output_path: str = None
+    output_path: str | None = None
 ):
     midi_path = audio_path.with_suffix(".midi")
     if not midi_path.exists():
@@ -209,10 +209,10 @@ def plot_melody_comparison(
     if active_pitches:
         plt.ylim(min(active_pitches) - 5, max(active_pitches) + 5)
     
-    plt.tight_layout()
+    fig.tight_layout()
     
     if output_path:
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        fig.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"\nPlot saved successfully to: {output_path}")
     else:
         plt.show()

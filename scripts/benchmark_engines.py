@@ -2,7 +2,9 @@
 
 import argparse
 import time
+
 import numpy as np
+
 from melodict.extraction.sota_models import EngineFactory
 
 
