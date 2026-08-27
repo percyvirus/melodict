@@ -3,7 +3,6 @@ Implementation of the Local Boundary Detection Model (LBDM) by Emilios Cambourop
 Calculates perceptual phrase boundaries based on pitch intervals, rests, and IOIs.
 """
 
-from typing import List
 import numpy as np
 
 
@@ -15,7 +14,7 @@ class LBDM:
         self.w_ioi = weight_ioi
         self.w_rest = weight_rest
 
-    def compute_boundary_strength(self, pitches: List[int], iois: List[float], rests: List[float]) -> np.ndarray:
+    def compute_boundary_strength(self, pitches: list[int], iois: list[float], rests: list[float]) -> np.ndarray:
         """
         Compute the degree of boundary strength for each interval in the sequence.
         

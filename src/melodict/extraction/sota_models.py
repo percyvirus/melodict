@@ -2,7 +2,8 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Type
+from typing import ClassVar
+
 import numpy as np
 
 logger = logging.getLogger("MelodictEngines")
@@ -31,7 +32,6 @@ class PitchExtractorEngine(ABC):
         else:
             self._history_buffer = np.concatenate((self._history_buffer, new_frame))
             
-        # Keep only the most recent 'max_samples' length of audio
         if len(self._history_buffer) > max_samples:
             self._history_buffer = self._history_buffer[-max_samples:]
             
@@ -44,16 +44,12 @@ class PitchExtractorEngine(ABC):
     @abstractmethod
     def load_model(self) -> bool:
         """Load underlying neural networks or acoustic algorithms into memory."""
-        pass
 
     @abstractmethod
-    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> Optional[int]:
-        """
-        Predict the dominant symbolic MIDI note from an audio buffer frame.
-        """
-        pass
+    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> int | None:
+        """Predict the dominant symbolic MIDI note from an audio buffer frame."""
 
-    def freq_to_midi(self, freq: float) -> Optional[int]:
+    def freq_to_midi(self, freq: float) -> int | None:
         """Utility to convert frequency in Hz to nearest symbolic MIDI integer."""
         if freq < self.min_freq or freq > self.max_freq or np.isnan(freq) or freq <= 0:
             return None
@@ -63,7 +59,6 @@ class PitchExtractorEngine(ABC):
 
 class LibrosaPyinEngine(PitchExtractorEngine):
     def __init__(self) -> None:
-        # pYIN is acoustic and frame-independent, no context needed
         super().__init__(name="librosa-pyin", context_sec=0.0)
 
     def load_model(self) -> bool:
@@ -71,11 +66,12 @@ class LibrosaPyinEngine(PitchExtractorEngine):
         self.is_ready = True
         return True
 
-    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> Optional[int]:
+    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> int | None:
         if not self.is_ready or len(audio_buffer) == 0:
             return None
         try:
             import librosa
+            
             f0, _, _ = librosa.pyin(
                 audio_buffer,
                 fmin=self.min_freq,
@@ -87,8 +83,8 @@ class LibrosaPyinEngine(PitchExtractorEngine):
             if not valid_f0:
                 return None
             return self.freq_to_midi(float(np.median(valid_f0)))
-        except Exception as e:
-            logger.error(f"pYIN prediction error: {e}")
+        except ImportError as e:
+            logger.error(f"Missing dependency for pYIN: {e}")
             return None
 
 
@@ -101,19 +97,16 @@ class TorchCrepeEngine(PitchExtractorEngine):
     def load_model(self) -> bool:
         logger.info(f"Loading TorchCrepe ({self.capacity}) weights...")
         try:
-            import setuptools
-            import pkg_resources
             import torch
-            import resampy
-            import torchcrepe
+            
             self.device = "mps" if torch.backends.mps.is_available() else "cpu"
             self.is_ready = True
             return True
-        except Exception as e:
+        except ImportError as e:
             logger.warning(f"torchcrepe failed to load: {e}. Engine disabled.")
             return False
 
-    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> Optional[int]:
+    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> int | None:
         if not self.is_ready or len(audio_buffer) == 0:
             return None
         try:
@@ -140,16 +133,15 @@ class TorchCrepeEngine(PitchExtractorEngine):
             
             if periodicity.max().item() < 0.5:
                 return None
-            return self.freq_to_midi(pitch.median().item())
-        except Exception as e:
+            return self.freq_to_midi(float(pitch.median().item()))
+        except Exception as e:  # noqa: BLE001
             logger.error(f"CREPE prediction error: {e}")
             return None
 
 
 class BasicPitchEngine(PitchExtractorEngine):
     def __init__(self) -> None:
-        # 1.0 second sliding window buffer to give the CNN temporal context
-        super().__init__(name="basic-pitch", context_sec=1.0)
+        super().__init__(name="basic-pitch", context_sec=2.0)
 
     def load_model(self) -> bool:
         logger.info("Loading Spotify Basic-Pitch polyphonic model (ONNX)...")
@@ -158,59 +150,55 @@ class BasicPitchEngine(PitchExtractorEngine):
             os.environ["BASIC_PITCH_TF"] = "0"
             os.environ["BASIC_PITCH_ONNX"] = "1"
             
-            from basic_pitch.inference import predict
             from basic_pitch import ICASSP_2022_MODEL_PATH
+            from basic_pitch.inference import predict
+            
             self._predict_fn = predict
             self._model_path = ICASSP_2022_MODEL_PATH
             self.is_ready = True
             return True
-        except Exception as e:
+        except ImportError as e:
             logger.warning(f"basic-pitch failed to load: {e}. Engine disabled.")
             return False
 
-    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> Optional[int]:
+    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> int | None:
         if not self.is_ready or len(audio_buffer) == 0:
             return None
             
-        # Get the sliding window buffer (e.g. 1.0s long)
         context_buffer = self._get_context_buffer(audio_buffer, sample_rate)
         buffer_duration = len(context_buffer) / sample_rate
         new_frame_duration = len(audio_buffer) / sample_rate
         
         try:
-            import tempfile
             import os
+            import tempfile
+            from contextlib import redirect_stderr, redirect_stdout
+            
             import soundfile as sf
-            from contextlib import redirect_stdout, redirect_stderr
             
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_wav:
                 sf.write(temp_wav.name, context_buffer, sample_rate)
                 
-                with open(os.devnull, 'w') as fnull:
-                    with redirect_stdout(fnull), redirect_stderr(fnull):
-                        _, midi_data, _ = self._predict_fn(temp_wav.name)
+                with open(os.devnull, 'w') as fnull, redirect_stdout(fnull), redirect_stderr(fnull):
+                    _, midi_data, _ = self._predict_fn(temp_wav.name)
                 
                 if midi_data.instruments and midi_data.instruments[0].notes:
                     notes = midi_data.instruments[0].notes
-                    
                     active_notes = []
-                    # We ONLY care about notes that are actively playing during the NEWEST 46ms chunk
                     current_chunk_start_time = buffer_duration - new_frame_duration
                     
                     for n in notes:
-                        # If the note overlaps with our newest chunk window
                         if n.start <= buffer_duration and n.end >= current_chunk_start_time:
                             freq = 440.0 * (2.0 ** ((n.pitch - 69) / 12.0))
                             if self.min_freq <= freq <= self.max_freq:
                                 active_notes.append(n)
                                 
                     if active_notes:
-                        # Skyline approach: if multiple polyphonic notes are detected, pick the highest pitch
                         best_note = max(active_notes, key=lambda n: n.pitch)
                         return best_note.pitch
                         
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Basic-Pitch prediction error: {e}")
             return None
 
@@ -222,18 +210,19 @@ class EssentiaYinEngine(PitchExtractorEngine):
     def load_model(self) -> bool:
         logger.info("Initializing Essentia PitchYin C++ engine...")
         try:
-            import essentia.standard as es
+            import essentia.standard as es  # noqa: F401
             self.is_ready = True
             return True
         except ImportError:
             logger.warning("essentia not installed. Engine disabled.")
             return False
 
-    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> Optional[int]:
+    def predict_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> int | None:
         if not self.is_ready or len(audio_buffer) == 0:
             return None
         try:
             import essentia.standard as es
+            
             pitch_extractor = es.PitchYin(
                 frameSize=len(audio_buffer),
                 sampleRate=sample_rate,
@@ -245,13 +234,14 @@ class EssentiaYinEngine(PitchExtractorEngine):
             if confidence < 0.5 or pitch == 0 or np.isnan(pitch):
                 return None
             return self.freq_to_midi(float(pitch))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Essentia YIN prediction error: {e}")
             return None
 
 
 class EngineFactory:
-    _ENGINES: Dict[str, Type[PitchExtractorEngine]] = {
+    # Solves RUF012: Explicitly marking class-level mutable dictionary
+    _ENGINES: ClassVar[dict[str, type[PitchExtractorEngine]]] = {
         "pyin": LibrosaPyinEngine,
         "crepe": TorchCrepeEngine,
         "basic-pitch": BasicPitchEngine,
@@ -259,7 +249,7 @@ class EngineFactory:
     }
 
     @classmethod
-    def create(cls, engine_name: str) -> Optional[PitchExtractorEngine]:
+    def create(cls, engine_name: str) -> PitchExtractorEngine | None:
         engine_class = cls._ENGINES.get(engine_name.lower())
         if not engine_class:
             return None
@@ -268,8 +258,8 @@ class EngineFactory:
         return engine
         
     @classmethod
-    def get_all_available(cls) -> List[PitchExtractorEngine]:
-        engines = []
+    def get_all_available(cls) -> list[PitchExtractorEngine]:
+        engines: list[PitchExtractorEngine] = []
         for name in cls._ENGINES:
             engine = cls.create(name)
             if engine and engine.is_ready:

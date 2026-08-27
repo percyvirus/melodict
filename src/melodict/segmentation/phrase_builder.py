@@ -1,26 +1,25 @@
 """Gestalt-based Local Boundary Detection Model (LBDM) for musical phrase segmentation."""
 
 import logging
-from typing import Dict, List, Tuple
 
 logger = logging.getLogger("MelodictLBDM")
 
-# Type alias for our 3-variable musical state
-NoteTuple = Tuple[int, int, int]  # (Pitch, Duration, Velocity)
+NoteTuple = tuple[int, int, int]  # (Pitch, Duration, Velocity)
+
 
 class PhraseBuilder:
     """Segments continuous note streams into phrases and builds an on-the-fly dictionary."""
 
-    def __init__(self, max_phrase_length: int = 12, silence_threshold_ms: int = 550):
+    def __init__(self, max_phrase_length: int = 12, silence_threshold_ms: int = 550) -> None:
         self.max_phrase_length = max_phrase_length
         self.silence_threshold_ms = silence_threshold_ms
-        self.current_phrase: List[NoteTuple] = []
+        self.current_phrase: list[NoteTuple] = []
         # Dictionary mapping phrase lengths to lists of recorded phrases
-        self.dictionary: Dict[int, List[List[NoteTuple]]] = {}
+        self.dictionary: dict[int, list[list[NoteTuple]]] = {}
 
     def add_note(self, note_event: NoteTuple) -> bool:
         """Add a note event tuple and evaluate LBDM boundary rules. Returns True if segmented."""
-        pitch, duration, velocity = note_event
+        pitch, duration, _velocity = note_event
         self.current_phrase.append(note_event)
 
         is_boundary = False
