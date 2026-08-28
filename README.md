@@ -19,7 +19,7 @@ During our initial evaluation phase on the MAESTRO (Piano) and GuitarSet dataset
 * **Smart Skyline Ground Truth:** We enhanced the traditional Skyline algorithm with offline contextual windowing to detect and filter out "bass bleeding" during melodic rests, providing a mathematically pure Ground Truth for evaluations.
 * **Asymmetric Sliding Window:** To solve the latency vs. context dilemma, we wrapped Convolutional Neural Networks (like Spotify's `basic-pitch`) in a historical circular buffer. The audio advances in ultra-fast 46 ms increments, allowing the CNN to utilize deep polyphonic context while delivering zero-perceived-latency updates to the musician.
 
-![Melody Extraction Visualization](paper_plot_double.png)
+![Melody Extraction Visualization](assets/paper_plot.png)
 *Figure 1: Frame-level visualization (46ms buffer) comparing SOTA engines against the MAESTRO dataset. The Smart Skyline (Solid Black) successfully ignores the bass-bleeding errors (Dotted Red) that pollute traditional extraction. The 2.0s buffered basic-pitch (Purple) successfully tracks the true melody through polyphonic noise where acoustic algorithms fail.*
 
 **Key Findings (Empirical Benchmarks):**
