@@ -30,6 +30,8 @@ dependencies = [
     "polars>=1.43.2",
     "matplotlib>=3.11.1",
     "jams>=0.3.5",
+    "sqlalchemy>=2.0.52",
+    "psycopg2-binary>=2.9.12",
 ]
 
 [project.optional-dependencies]

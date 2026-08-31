@@ -28,6 +28,18 @@ During our initial evaluation phase on the MAESTRO (Piano) and GuitarSet dataset
 * **Clean Monophonic (Guitar):** When processing clean, line-in guitar signals (GuitarSet), the acoustic `essentia-yin` engine slightly outperforms the CNN (0.447 RPA vs 0.445 RPA), proving acoustic algorithms are optimal for direct-input instruments.
 * **Interactive Generation:** The VMM Continuator processes musical context and generates stylistic responses in **< 0.02 ms**, guaranteeing seamless human-machine interaction.
 
+### Phase 2: Persistent Corpus & LBDM Segmentation
+
+Melodict builds a persistent musical memory by extracting performances, applying quality filters (bass-bleeding removal, median filtering), and segmenting them using Gestalt principles and the Local Boundary Detection Model (LBDM). The resulting high-quality phrases are stored in a PostgreSQL relational database.
+
+**1. Audio Extraction (Neural Network + State Machine)**
+*Extracting polyphonic audio via Basic-Pitch with a 46ms sliding window and Gestalt cutoffs.*
+![Corpus Audit Audio](assets/corpus_audit_audio.png)
+
+**2. Symbolic Extraction (Smart Skyline on MIDI)**
+*Direct symbolic processing using the Smart Skyline algorithm to extract the highest pitch in real-time, yielding pristine musical phrases.*
+![Corpus Audit MIDI](assets/corpus_audit_MAESTRO_Generic_Midi.png)
+
 ## Architecture
 
     [ Live Piano / Guitar ] ---> [ Max/MSP Capture ] --(UDP / OSC < 2ms)--> [ Melodict Python Engine ]

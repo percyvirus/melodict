@@ -1,10 +1,11 @@
-# Use official lightweight Python 3.12 image
-FROM python:3.12-slim-bookworm
+# Use official lightweight Python 3.11 image
+FROM python:3.11-slim-bookworm
 
-# Install system dependencies required for audio processing libraries
+# Install system dependencies required for audio processing and PostgreSQL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libsndfile1 \
+    libpq-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 

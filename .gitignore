@@ -23,3 +23,6 @@ recordings/
 # Evaluation outputs and plots
 /*.png
 /*.csv
+
+# Local test exports
+exports/

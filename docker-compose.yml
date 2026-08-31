@@ -5,14 +5,32 @@ services:
       dockerfile: Dockerfile
     image: melodict:latest
     container_name: melodict_core
-    # Host networking is crucial for ultra-low latency UDP/OSC audio triggers
     network_mode: "host"
     environment:
       - PYTHONUNBUFFERED=1
       - OSC_RECEIVE_PORT=8001
       - OSC_SEND_PORT=8000
+      - DATABASE_URL=postgresql://melodict:melodict_pass@localhost:5432/melodict_db
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts
       - ./datasets:/app/datasets
     restart: unless-stopped
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: melodict_db
+    environment:
+      - POSTGRES_USER=melodict
+      - POSTGRES_PASSWORD=melodict_pass
+      - POSTGRES_DB=melodict_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
