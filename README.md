@@ -34,7 +34,7 @@ Melodict builds a persistent musical memory by extracting performances, applying
 
 **1. Audio Extraction (Neural Network + State Machine)**
 *Extracting polyphonic audio via Basic-Pitch with a 46ms sliding window and Gestalt cutoffs.*
-![Corpus Audit Audio](assets/corpus_audit_audio.png)
+![Corpus Audit Audio](assets/corpus_audit_MAESTRO_Generic_Audio.png)
 
 **2. Symbolic Extraction (Smart Skyline on MIDI)**
 *Direct symbolic processing using the Smart Skyline algorithm to extract the highest pitch in real-time, yielding pristine musical phrases.*
