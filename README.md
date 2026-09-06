@@ -39,7 +39,7 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 | **basic-pitch** | 97.19 | 0.00 | 2.39 | 0.00 | 132.9 |
 | **crepe-tiny** | 91.00 | 0.00 | 8.45 | 0.00 | 43.4 |
 
-![DSP Benchmark Clean](assets/dsp_benchmark_clean.jpg)
+![DSP Benchmark Clean](assets/dsp_benchmark_clean.png)
 
 **Table 2: Live Stage Acoustics Simulation**
 | Engine | Accuracy (%) | Octave Errors (%) | Missed Voicing (%) | False Alarms (%) | Lag (ms) |
@@ -49,7 +49,7 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 | **essentia-yin** | 94.55 | 5.15 | 0.02 | 0.00 | 15.3 |
 | **crepe-tiny** | 81.35 | 0.15 | 18.10 | 0.00 | 30.7 |
 
-![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.jpg)
+![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.png)
 *Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency (130.3 ms).*
 
 ### Phase 2: Persistent Corpus & LBDM Segmentation
