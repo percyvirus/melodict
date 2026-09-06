@@ -52,6 +52,8 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 ![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.png)
 *Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency (130.3 ms).*
 
+**Note on Temporal Precision & Micro-Rests:** The brief drops to zero (silence) visible between chromatic steps in the plots are not engine failures. To prevent digital audio clipping during instantaneous pitch transitions, the benchmark applies a 5ms ADSR fade-in/fade-out envelope to the generated waveforms. Engines like `basic-pitch` and `librosa-pyin` demonstrate such extreme temporal resolution that they accurately detect these millisecond amplitude drops as momentary rests.
+
 ### Phase 2: Persistent Corpus & LBDM Segmentation
 
 Melodict builds a persistent musical memory by extracting performances, applying quality filters (bass-bleeding removal, median filtering), and segmenting them using Gestalt principles and the Local Boundary Detection Model (LBDM). The resulting high-quality phrases are stored in a PostgreSQL relational database.
