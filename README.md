@@ -28,6 +28,30 @@ During our initial evaluation phase on the MAESTRO (Piano) and GuitarSet dataset
 * **Clean Monophonic (Guitar):** When processing clean, line-in guitar signals (GuitarSet), the acoustic `essentia-yin` engine slightly outperforms the CNN (0.447 RPA vs 0.445 RPA), proving acoustic algorithms are optimal for direct-input instruments.
 * **Interactive Generation:** The VMM Continuator processes musical context and generates stylistic responses in **< 0.02 ms**, guaranteeing seamless human-machine interaction.
 
+### Phase 1.5: DSP Engine Temporal & Acoustic Benchmarking
+To measure real-world reliability, engines were subjected to a 5-second per note chromatic scale test (A2 to A5). We evaluated them under both **Clean Audio** conditions and simulated **Live Stage Acoustics** (50Hz rumble, ambient noise, room reverb, and harmonic complexity).
+
+**Table 1: Clean Audio Simulation**
+| Engine | Accuracy (%) | Octave Errors (%) | Missed Voicing (%) | False Alarms (%) | Lag (ms) |
+|---|---|---|---|---|---|
+| **librosa-pyin** | 99.93 | 0.00 | 0.00 | 0.00 | 0.0 |
+| **essentia-yin** | 99.78 | 0.02 | 0.00 | 0.00 | 11.5 |
+| **basic-pitch** | 97.19 | 0.00 | 2.39 | 0.00 | 132.9 |
+| **crepe-tiny** | 91.00 | 0.00 | 8.45 | 0.00 | 43.4 |
+
+![DSP Benchmark Clean](assets/dsp_benchmark_clean.jpg)
+
+**Table 2: Live Stage Acoustics Simulation**
+| Engine | Accuracy (%) | Octave Errors (%) | Missed Voicing (%) | False Alarms (%) | Lag (ms) |
+|---|---|---|---|---|---|
+| **basic-pitch** | 97.34 | 0.00 | 1.14 | 0.00 | 130.3 |
+| **librosa-pyin** | 97.34 | 2.56 | 0.00 | 0.00 | 3.8 |
+| **essentia-yin** | 94.55 | 5.15 | 0.02 | 0.00 | 15.3 |
+| **crepe-tiny** | 81.35 | 0.15 | 18.10 | 0.00 | 30.7 |
+
+![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.jpg)
+*Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency (130.3 ms).*
+
 ### Phase 2: Persistent Corpus & LBDM Segmentation
 
 Melodict builds a persistent musical memory by extracting performances, applying quality filters (bass-bleeding removal, median filtering), and segmenting them using Gestalt principles and the Local Boundary Detection Model (LBDM). The resulting high-quality phrases are stored in a PostgreSQL relational database.
@@ -90,6 +114,10 @@ Visualize predictions vs. Ground Truth on a Piano Roll:
 Evaluate algorithms specifically on Guitar audio (Acoustic Mic vs. Line-In Hexaphonic):
 
     uv run python scripts/evaluate_guitarset.py --data_dir /path/to/guitarset --audio_type mix
+    
+Run DSP & Temporal Precision benchmarks:
+
+    uv run python scripts/benchmark_dsp_analysis.py --note_duration 5.0
 
 ## Max/MSP Integration
 
