@@ -39,7 +39,7 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 | **basic-pitch** | 96.87 | 0.00 | 2.29 | 0.85 | 106.9 |
 | **crepe-tiny** | 90.58 | 0.00 | 8.23 | 0.72 | 51.0 |
 
-![DSP Benchmark Clean](assets/dsp_benchmark_clean.jpg)
+![DSP Benchmark Clean](assets/dsp_benchmark_clean.png)
 
 **Table 2: Live Stage Acoustics Simulation**
 | Engine | Accuracy (%) | Octave Errors (%) | Missed Voicing (%) | False Alarms (%) | Lag (ms) |
@@ -49,7 +49,7 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 | **essentia-yin** | 93.96 | 5.12 | 0.00 | 0.92 | 0.0 |
 | **crepe-tiny** | 81.28 | 0.12 | 17.88 | 0.67 | 19.9 |
 
-![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.jpg)
+![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.png)
 *Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency.*
 
 **Note on Temporal Precision & Ground Truth Accuracy:** To prevent digital audio clipping during instantaneous pitch transitions, the benchmark applies a 5ms ADSR fade-in/fade-out envelope to the edges of every note. The Ground Truth array strictly models these 5ms windows as genuine silences (MIDI 0). 
