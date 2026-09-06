@@ -37,6 +37,7 @@ def apply_stage_acoustics(audio: np.ndarray, sr: int) -> np.ndarray:
 
 
 def generate_chromatic_scale(start_midi: int = 45, end_midi: int = 81, duration_sec: float = 0.5, sr: int = 44100, apply_acoustics: bool = True) -> tuple[np.ndarray, list[int]]:
+    """Generates a chromatic scale with 5ms ADSR envelopes to measure temporal cutoffs."""
     notes_count = (end_midi - start_midi) + 1
     samples_per_note = int(duration_sec * sr)
     total_samples = notes_count * samples_per_note
@@ -63,7 +64,12 @@ def generate_chromatic_scale(start_midi: int = 45, end_midi: int = 81, duration_
         envelope[-fade_samples:] = np.linspace(1, 0, fade_samples)
         
         audio[start_idx:end_idx] = tone * envelope
-        ground_truth.extend([current_midi] * samples_per_note)
+        
+        # CORRECTED GROUND TRUTH: Assign 0 (silence) during the 5ms ADSR fade windows
+        gt_note = np.full(samples_per_note, current_midi)
+        gt_note[:fade_samples] = 0
+        gt_note[-fade_samples:] = 0
+        ground_truth.extend(gt_note.tolist())
         
     final_audio = apply_stage_acoustics(audio, sr) if apply_acoustics else audio
     return final_audio, ground_truth
@@ -105,7 +111,10 @@ def run_temporal_benchmark(note_duration_sec: float, buffer_size_ms: int = 46, a
             pred_pitch = int(pred) if pred is not None else 0
             
             gt_buffer = ground_truth[i : i + hop_length]
-            gt_pitch = max(set(gt_buffer), key=gt_buffer.count)
+            if gt_buffer.count(0) > (len(gt_buffer) * 0.10):
+                gt_pitch = 0
+            else:
+                gt_pitch = max(set(gt_buffer), key=gt_buffer.count)
             
             predicted_track.append(pred_pitch)
             ground_truth_track.append(gt_pitch)

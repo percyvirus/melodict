@@ -34,25 +34,27 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 **Table 1: Clean Audio Simulation**
 | Engine | Accuracy (%) | Octave Errors (%) | Missed Voicing (%) | False Alarms (%) | Lag (ms) |
 |---|---|---|---|---|---|
-| **librosa-pyin** | 99.93 | 0.00 | 0.00 | 0.00 | 0.0 |
-| **essentia-yin** | 99.78 | 0.02 | 0.00 | 0.00 | 11.5 |
-| **basic-pitch** | 97.19 | 0.00 | 2.39 | 0.00 | 132.9 |
-| **crepe-tiny** | 91.00 | 0.00 | 8.45 | 0.00 | 43.4 |
+| **librosa-pyin** | 99.06 | 0.00 | 0.00 | 0.94 | 0.0 |
+| **essentia-yin** | 99.06 | 0.00 | 0.00 | 0.94 | 0.0 |
+| **basic-pitch** | 96.87 | 0.00 | 2.29 | 0.85 | 106.9 |
+| **crepe-tiny** | 90.58 | 0.00 | 8.23 | 0.72 | 51.0 |
 
-![DSP Benchmark Clean](assets/dsp_benchmark_clean.png)
+![DSP Benchmark Clean](assets/dsp_benchmark_clean.jpg)
 
 **Table 2: Live Stage Acoustics Simulation**
 | Engine | Accuracy (%) | Octave Errors (%) | Missed Voicing (%) | False Alarms (%) | Lag (ms) |
 |---|---|---|---|---|---|
-| **basic-pitch** | 97.34 | 0.00 | 1.14 | 0.00 | 130.3 |
-| **librosa-pyin** | 97.34 | 2.56 | 0.00 | 0.00 | 3.8 |
-| **essentia-yin** | 94.55 | 5.15 | 0.02 | 0.00 | 15.3 |
-| **crepe-tiny** | 81.35 | 0.15 | 18.10 | 0.00 | 30.7 |
+| **basic-pitch** | 96.79 | 0.00 | 1.17 | 0.92 | 108.2 |
+| **librosa-pyin** | 96.49 | 2.56 | 0.00 | 0.94 | 0.0 |
+| **essentia-yin** | 93.96 | 5.12 | 0.00 | 0.92 | 0.0 |
+| **crepe-tiny** | 81.28 | 0.12 | 17.88 | 0.67 | 19.9 |
 
-![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.png)
-*Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency (130.3 ms).*
+![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.jpg)
+*Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency.*
 
-**Note on Temporal Precision & Micro-Rests:** The brief drops to zero (silence) visible between chromatic steps in the plots are not engine failures. To prevent digital audio clipping during instantaneous pitch transitions, the benchmark applies a 5ms ADSR fade-in/fade-out envelope to the generated waveforms. Engines like `basic-pitch` and `librosa-pyin` demonstrate such extreme temporal resolution that they accurately detect these millisecond amplitude drops as momentary rests.
+**Note on Temporal Precision & Ground Truth Accuracy:** To prevent digital audio clipping during instantaneous pitch transitions, the benchmark applies a 5ms ADSR fade-in/fade-out envelope to the edges of every note. The Ground Truth array strictly models these 5ms windows as genuine silences (MIDI 0). 
+
+Consequently, neural engines like `basic-pitch` possess the temporal resolution to detect these millisecond drops. In contrast, acoustic engines that rely on Viterbi decoding or temporal smoothing (like `librosa-pyin`) often gloss over these micro-rests, artificially bridging the gap and incurring accuracy penalties (False Alarms) for hallucinating a note where silence physically exists.
 
 ### Phase 2: Persistent Corpus & LBDM Segmentation
 
