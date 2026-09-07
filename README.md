@@ -8,7 +8,7 @@
 
 ## Overview
 
-**Melodict** bridges the gap between raw audio capture (via Max/MSP or live instruments like piano and guitar) and symbolic AI generation. Designed to overcome traditional FFT filtering delays and legacy pitch-tracking bottlenecks, Melodict provides an ultra-low-latency Open Sound Control (OSC) pipeline that:
+**Melodict** bridges the gap between raw audio capture (via Max/MSP or live instruments like piano and guitar) and symbolic AI generation. Designed to overcome traditional FFT filtering delays and legacy pitch-tracking bottlenecks, Melodict provides a hybrid zero-latency pipeline using **BlackHole** (CoreAudio) for PCM streaming and **Open Sound Control (OSC)** for symbolic control data:
 
 1. **Extracts** symbolic pitch and MIDI events in real-time using State-of-the-Art (SOTA) neural networks and acoustic trackers.
 2. **Segments** continuous melodic streams into natural musical phrases using Gestalt-based heuristic models (LBDM).
@@ -70,34 +70,49 @@ Melodict builds a persistent musical memory by extracting performances, applying
 
 ## Architecture
 
-    [ Live Piano / Guitar ] ---> [ Max/MSP Capture ] --(UDP / OSC < 2ms)--> [ Melodict Python Engine ]
-                                                                                       │
-    [ Reactive AI Accompaniment ] <-- [ Phrase Dictionary ] <-- [ LBDM Segmentation ] <┘
+    [ Live Piano / Guitar ] ---> [ Max/MSP (Out: BlackHole) ] ==(CoreAudio PCM: 0ms)==> [ Melodict Python ]
+                                                                                                │
+    [ Reactive AI Accompaniment ] <--(UDP / OSC: < 2ms)-- [ Phrase Dictionary ] <-- [ LBDM ] <──┘
 
 ## Quick Start
 
 ### 1. Prerequisites
-* uv (https://github.com/astral-sh/uv - for local Python dependency management)
-* Docker & Docker Compose (optional, for containerized execution)
-* Cycling '74 Max/MSP (for live audio capture and synthesis)
+* **uv**: An extremely fast Python package installer and resolver written in Rust. It replaces `pip` and `virtualenv`, ensuring reproducible and instantaneous environment setups. (https://github.com/astral-sh/uv)
+* **BlackHole**: A virtual audio driver for zero-latency routing on macOS.
+* **PostgreSQL**: For the persistent musical phrase corpus.
+* **Cycling '74 Max/MSP**: For live audio capture and synthesis.
 
 ### 2. Local Setup with uv
 
-Clone the repository and sync dependencies instantly:
+Clone the repository and sync all dependencies instantly:
 
     git clone https://github.com/yourusername/melodict.git
     cd melodict
     uv sync
 
-Run the OSC bridge server locally:
+### 3. Running a Live Interactive Session
 
-    uv run python -m melodict.osc.server --ip 127.0.0.1 --port 8001
+The core orchestrator (`scripts/live_session.py`) connects BlackHole audio with the PostgreSQL corpus and Max/MSP OSC outputs. 
 
-### 3. Containerized Setup (Docker)
+**Free Improvisation (Load full DB):**
+    
+    uv run python scripts/live_session.py
 
-To run the engine in an isolated environment with host networking (zero UDP port-forwarding latency):
+**Stylistic Filter (Only load specific artists/sessions into Markov memory):**
+    
+    uv run python scripts/live_session.py --filter-artists "Ignasi, Bill Evans" --filter-sessions "Session_1"
 
-    docker compose up --build
+**Active Learning (Save your live performance phrases into the database):**
+
+    uv run python scripts/live_session.py --learn-as "Philippe_Live_1"
+
+## Max/MSP Integration
+
+1. Open `max_msp/osc_bridge.maxpat` in Max 8 or later.
+2. Go to **Options -> Audio Status** and set your **Output Device** to `BlackHole`.
+3. Connect your hardware audio input (microphone or instrument cable) to the `ezadc~` object.
+4. Turn on the DSP engine. Audio is now silently routed to Python with zero latency.
+5. Max receives the AI-generated MIDI responses dynamically via OSC on UDP port `8000`.
 
 ## Testing & Evaluation Scripts
 
@@ -122,13 +137,6 @@ Evaluate algorithms specifically on Guitar audio (Acoustic Mic vs. Line-In Hexap
 Run DSP & Temporal Precision benchmarks:
 
     uv run python scripts/benchmark_dsp_analysis.py --note_duration 5.0
-
-## Max/MSP Integration
-
-1. Open `max_msp/melodict_osc_bridge.maxpat` in Max 8 or later.
-2. Connect your audio interface input (microphone or guitar instrument cable) to the `ezadc~` object.
-3. Ensure the UDP send port is set to `8001` and receive port is set to `8000`.
-4. Turn on DSP to begin streaming audio features.
 
 ## License
 
