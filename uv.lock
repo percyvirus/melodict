@@ -858,6 +858,7 @@ dependencies = [
     { name = "torch" },
     { name = "torchaudio" },
     { name = "torchcrepe" },
+    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -895,6 +896,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.2.0,<=2.7.0" },
     { name = "torchaudio", specifier = ">=2.2.0,<=2.7.0" },
     { name = "torchcrepe", specifier = ">=0.0.23" },
+    { name = "tqdm", specifier = ">=4.69.0" },
 ]
 provides-extras = ["dev"]
 

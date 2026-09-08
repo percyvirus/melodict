@@ -1,10 +1,14 @@
 """Modular SOTA pitch tracking engines for multi-algorithm benchmarking and real-time inference."""
 
 import logging
+import os
+import tempfile
 from abc import ABC, abstractmethod
+from contextlib import redirect_stderr, redirect_stdout
 from typing import ClassVar
 
 import numpy as np
+import soundfile as sf
 
 logger = logging.getLogger("MelodictEngines")
 
@@ -150,8 +154,14 @@ class BasicPitchEngine(PitchExtractorEngine):
             os.environ["BASIC_PITCH_TF"] = "0"
             os.environ["BASIC_PITCH_ONNX"] = "1"
             
+            root_logger = logging.getLogger()
+            previous_level = root_logger.getEffectiveLevel()
+            root_logger.setLevel(logging.ERROR)
+            
             from basic_pitch import ICASSP_2022_MODEL_PATH
             from basic_pitch.inference import predict
+            
+            root_logger.setLevel(previous_level)
             
             self._predict_fn = predict
             self._model_path = ICASSP_2022_MODEL_PATH
@@ -201,6 +211,39 @@ class BasicPitchEngine(PitchExtractorEngine):
         except Exception as e:  # noqa: BLE001
             logger.error(f"Basic-Pitch prediction error: {e}")
             return None
+    
+    def predict_polyphonic_frame(self, audio_buffer: np.ndarray, sample_rate: int = 44100) -> list[int]:
+        """Predict ALL dominant symbolic MIDI notes from an audio buffer frame for polyphonic evaluation."""
+        if not self.is_ready or len(audio_buffer) == 0:
+            return []
+            
+        context_buffer = self._get_context_buffer(audio_buffer, sample_rate)
+        buffer_duration = len(context_buffer) / sample_rate
+        new_frame_duration = len(audio_buffer) / sample_rate
+        
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_wav:
+                sf.write(temp_wav.name, context_buffer, sample_rate)
+                
+                with open(os.devnull, 'w') as fnull, redirect_stdout(fnull), redirect_stderr(fnull):
+                    _, midi_data, _ = self._predict_fn(temp_wav.name)
+                
+                active_notes = []
+                if midi_data.instruments and midi_data.instruments[0].notes:
+                    notes = midi_data.instruments[0].notes
+                    current_chunk_start_time = buffer_duration - new_frame_duration
+                    
+                    for n in notes:
+                        # Check if the note intersects with our strict 46ms causality window
+                        if n.start <= buffer_duration and n.end >= current_chunk_start_time:
+                            freq = 440.0 * (2.0 ** ((n.pitch - 69) / 12.0))
+                            if self.min_freq <= freq <= self.max_freq:
+                                active_notes.append(n.pitch)
+                                
+                return list(set(active_notes))
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Basic-Pitch polyphonic prediction error: {e}")
+            return []
 
 
 class EssentiaYinEngine(PitchExtractorEngine):

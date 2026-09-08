@@ -184,7 +184,7 @@ def run_dsp_benchmark(note_duration_sec: float, buffer_size_ms: int = 46, apply_
 
     # 2. Export Subplot Visualization
     num_engines = len(results)
-    fig, axes = plt.subplots(nrows=num_engines, ncols=1, figsize=(14, 4 * num_engines), sharex=True)
+    _, axes = plt.subplots(nrows=num_engines, ncols=1, figsize=(14, 4 * num_engines), sharex=True)
     if num_engines == 1:
         axes = [axes]
         
