@@ -10,7 +10,7 @@ services:
       - PYTHONUNBUFFERED=1
       - OSC_RECEIVE_PORT=8001
       - OSC_SEND_PORT=8000
-      - DATABASE_URL=postgresql://melodict:melodict_pass@localhost:5432/melodict_db
+      - DATABASE_URL=postgresql://melodict:melodict_pass@localhost:5433/melodict_db
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts
@@ -30,6 +30,7 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./database/init_corpus.sql:/docker-entrypoint-initdb.d/init_corpus.sql
     restart: unless-stopped
 
 volumes:
