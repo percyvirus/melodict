@@ -77,18 +77,22 @@ Melodict builds a persistent musical memory by extracting performances, applying
 ## Quick Start
 
 ### 1. Prerequisites
-* **uv**: An extremely fast Python package installer and resolver written in Rust. It replaces `pip` and `virtualenv`, ensuring reproducible and instantaneous environment setups. (https://github.com/astral-sh/uv)
+* **uv**: An extremely fast Python package installer and resolver written in Rust. (https://github.com/astral-sh/uv)
 * **BlackHole**: A virtual audio driver for zero-latency routing on macOS.
-* **PostgreSQL**: For the persistent musical phrase corpus.
+* **Docker Desktop**: Required to spin up the PostgreSQL database container with the pre-populated MIDI corpus.
 * **Cycling '74 Max/MSP**: For live audio capture and synthesis.
 
-### 2. Local Setup with uv
+### 2. Local Setup with uv & Docker
 
 Clone the repository and sync all dependencies instantly:
 
     git clone https://github.com/yourusername/melodict.git
     cd melodict
     uv sync
+
+Launch the pre-configured PostgreSQL database (which contains the imported MAESTRO/GuitarSet phrases):
+
+    docker compose up -d
 
 ### 3. Running a Live Interactive Session
 
