@@ -173,7 +173,6 @@ def main():
                                     osc_client.send_message("/midi/ai_answer", [pitch, 0])
                                     time.sleep(duration_ms / 1000.0)
                             
-                            # Lanzamos la melodía en segundo plano para no congelar el audio
                             threading.Thread(target=play_melody, args=(response_sequence,), daemon=True).start()
                             
                             print(f"[VMM] Generated {len(response_sequence)} response notes.")
