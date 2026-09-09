@@ -7,6 +7,8 @@ import argparse
 import os
 import queue
 import sys
+import threading
+import time
 
 import numpy as np
 
@@ -164,8 +166,16 @@ def main():
                             
                             # Generation
                             response_sequence = markov_model.generate_continuation(completed_phrase)
-                            for i, note in enumerate(response_sequence):
-                                osc_client.send_message("/midi/ai_answer", [note[0], i])
+                            
+                            def play_melody(seq):
+                                for n in seq:
+                                    pitch, duration_ms, _velocity = n
+                                    osc_client.send_message("/midi/ai_answer", [pitch, 0])
+                                    time.sleep(duration_ms / 1000.0)
+                            
+                            # Lanzamos la melodía en segundo plano para no congelar el audio
+                            threading.Thread(target=play_melody, args=(response_sequence,), daemon=True).start()
+                            
                             print(f"[VMM] Generated {len(response_sequence)} response notes.")
                             
                             # Database Save
@@ -174,7 +184,7 @@ def main():
                                     session_id=active_session_record.id,
                                     note_count=len(completed_phrase),
                                     duration_ms=sum(d for p, d, v in completed_phrase),
-                                    sequence=[list(t) for t in completed_phrase]
+                                    sequence=[[int(p), int(d), int(v)] for p, d, v in completed_phrase]
                                 )
                                 db_session.add(new_phrase)
                                 db_session.commit()
