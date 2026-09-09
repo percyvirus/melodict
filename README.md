@@ -55,7 +55,9 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 ### Phase 1.8: Polyphonic Multipitch MIR Evaluation (Causal vs. Acausal)
 To quantify the "Real-Time Tax"—the accuracy lost when forcing an AI to operate strictly in the present without forward context—we evaluated Melodict's streaming architecture against state-of-the-art offline (acausal) multipitch models on the MAESTRO dataset using standard `mir_eval` metrics.
 
-**Table 3: Multipitch Extraction Performance**
+> **Note:** The preliminary metrics below reflect an initial baseline evaluation on a small subset of the MAESTRO dataset to validate the architecture. These figures will be updated upon completion of the exhaustive benchmark across the entire dataset.
+
+**Table 3: Multipitch Extraction Performance (Preliminary Subset)**
 | Engine / Modality | F1-Score | Precision | Recall | Accuracy |
 | :--- | :--- | :--- | :--- | :--- |
 | **Basic-Pitch (Offline / Acausal)** | **47.56%** | 37.42% | **66.93%** | **31.62%** |
@@ -153,7 +155,7 @@ Run DSP & Temporal Precision benchmarks:
 
     uv run python scripts/benchmark_dsp_analysis.py --note_duration 5.0
 
-**Polyphonic Multipitch Evaluation Suite:**
+**[NEW] Polyphonic Multipitch Evaluation Suite:**
 
 Profile inference hardware latency (ONNX vs. CoreML):
     
