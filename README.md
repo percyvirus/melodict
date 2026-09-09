@@ -52,9 +52,20 @@ To measure real-world reliability, engines were subjected to a 5-second per note
 ![DSP Benchmark Acoustic](assets/dsp_benchmark_acoustic.png)
 *Figure 2: Performance degradation under stage acoustics. While `essentia-yin` and `librosa-pyin` suffer from mathematically induced octave errors (Red 'x') when confronted with harmonic resonance, the neural engine `basic-pitch` maintains perfect octave stability at the cost of a higher transition latency.*
 
-**Note on Temporal Precision & Ground Truth Accuracy:** To prevent digital audio clipping during instantaneous pitch transitions, the benchmark applies a 5ms ADSR fade-in/fade-out envelope to the edges of every note. The Ground Truth array strictly models these 5ms windows as genuine silences (MIDI 0). 
+### Phase 1.8: Polyphonic Multipitch MIR Evaluation (Causal vs. Acausal)
+To quantify the "Real-Time Tax"—the accuracy lost when forcing an AI to operate strictly in the present without forward context—we evaluated Melodict's streaming architecture against state-of-the-art offline (acausal) multipitch models on the MAESTRO dataset using standard `mir_eval` metrics.
 
-Consequently, neural engines like `basic-pitch` possess the temporal resolution to detect these millisecond drops. In contrast, acoustic engines that rely on Viterbi decoding or temporal smoothing (like `librosa-pyin`) often gloss over these micro-rests, artificially bridging the gap and incurring accuracy penalties (False Alarms) for hallucinating a note where silence physically exists.
+**Table 3: Multipitch Extraction Performance**
+| Engine / Modality | F1-Score | Precision | Recall | Accuracy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Basic-Pitch (Offline / Acausal)** | **47.56%** | 37.42% | **66.93%** | **31.62%** |
+| **NeuralNote (Offline / Acausal)** | **46.53%** | **43.00%** | 51.94% | 30.77% |
+| **Melodict Streaming (Causal 46ms)**| **36.15%** | 30.39% | 45.70% | 22.37% |
+
+**Key Research Findings:**
+* **The "Real-Time Tax":** Forcing the CNN into a strict causal streaming window (46ms) drops the overall F1-Score by ~11.4%. Without the ability to "look ahead" into the audio file, the engine is highly susceptible to False Alarms triggered by acoustic resonances (pedal sustain), causing Precision to drop to 30.39%. This empirically demonstrates the architectural cost of achieving true zero-latency interactivity.
+* **Algorithmic Dissonance (SOTA Offline):** Despite achieving nearly identical F1-Scores (~47%), `basic-pitch` and `NeuralNote` exhibit opposing behaviors. `basic-pitch` is hypersensitive (66.9% Recall) but hallucinates notes, while `NeuralNote` is conservative (43% Precision) but misses softer, faster phrasings.
+* **Hardware-Driven Backend Selection:** We explicitly lock the Melodict CNN backend to **ONNX Runtime (CPU)** rather than relying on GPU accelerators like CoreML. Hardware profiling under heavy sustained loads (180s of audio) revealed the CPU processes the lightweight Basic-Pitch CNN in 2.33 seconds, slightly outperforming the Apple Neural Engine (2.35s). By bypassing GPU memory transfer overheads, ONNX guarantees absolute stability for multi-worker parallelization in Dockerized environments.
 
 ### Phase 2: Persistent Corpus & LBDM Segmentation
 
@@ -141,6 +152,20 @@ Evaluate algorithms specifically on Guitar audio (Acoustic Mic vs. Line-In Hexap
 Run DSP & Temporal Precision benchmarks:
 
     uv run python scripts/benchmark_dsp_analysis.py --note_duration 5.0
+
+**Polyphonic Multipitch Evaluation Suite:**
+
+Profile inference hardware latency (ONNX vs. CoreML):
+    
+    uv run python scripts/benchmark_engines.py --engine onnx --duration 180.0
+
+Evaluate causal streaming multipitch capability:
+    
+    uv run python scripts/evaluate_polyphonic.py --data_dir /path/to/maestro --workers 6
+
+Compare offline SOTA engines (e.g., NeuralNote) against Ground Truth MIDI:
+    
+    uv run python scripts/evaluate_midi_vs_midi.py --gt_dir /path/to/maestro --pred_dir /path/to/preds --pred_suffix _NeuralNote
 
 ## License
 
