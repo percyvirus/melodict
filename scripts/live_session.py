@@ -55,6 +55,8 @@ def parse_arguments():
     parser.add_argument("--buffer_ms", type=int, default=46, help="Buffer size in ms")
     parser.add_argument("--osc_ip", type=str, default="127.0.0.1", help="Max8 IP")
     parser.add_argument("--osc_port", type=int, default=8000, help="Max8 UDP port")
+    # NEW: Noise gate threshold parameter
+    parser.add_argument("--noise_gate", type=float, default=0.01, help="RMS threshold to cut off background hum")
     return parser.parse_args()
 
 def fetch_corpus(db_session, artists_arg, sessions_arg):
@@ -156,12 +158,22 @@ def main():
             while True:
                 audio_frame = audio_queue.get()
                 
-                raw_pitch = extractor.predict_frame(audio_frame, sample_rate=samplerate)
-                if raw_pitch is None:
+                # --- NEW: RMS Noise Gate ---
+                # Calculate the energy of the current audio frame
+                rms_energy = np.sqrt(np.mean(audio_frame**2))
+                
+                if rms_energy < args.noise_gate:
+                    # Signal is too quiet (background hum), force silence
                     raw_pitch = 0
-                    
-                if 0 < raw_pitch < 45: # Smart Skyline cutoff
-                    raw_pitch = 0
+                else:
+                    # Signal is loud enough, let the neural network analyze it
+                    raw_pitch = extractor.predict_frame(audio_frame, sample_rate=samplerate)
+                    if raw_pitch is None:
+                        raw_pitch = 0
+                        
+                    if 0 < raw_pitch < 45: # Smart Skyline cutoff
+                        raw_pitch = 0
+                # ---------------------------
                     
                 # Note transition logic
                 if raw_pitch != active_pitch:
