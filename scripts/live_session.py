@@ -28,15 +28,20 @@ from src.melodict.extraction.sota_models import EngineFactory
 from src.melodict.generation.continuator import VMMContinuator
 from src.melodict.segmentation.phrase_builder import PhraseBuilder
 
-# Global audio queue for thread-safe processing
-audio_queue = queue.Queue()
+# Global audio queue for thread-safe processing limited to 3 frames to avoid latency drift
+audio_queue = queue.Queue(maxsize=3)
 
 def audio_callback(indata, frames, time_info, status):
     """Reads audio from BlackHole and pushes it to the processing queue."""
     if status:
         print(f"Audio Status: {status}", file=sys.stderr)
     mono_data = np.mean(indata, axis=1) if indata.shape[1] > 1 else indata[:, 0]
-    audio_queue.put(mono_data.copy())
+    
+    # Drop old frames if Python is lagging to maintain real-time causality
+    try:
+        audio_queue.put_nowait(mono_data.copy())
+    except queue.Full:
+        pass
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Melodict Live Session Orchestrator")
@@ -136,6 +141,14 @@ def main():
     active_duration_ms = 0
     silence_duration_ms = 0
     
+    # Global playback function for the async thread
+    def play_melody(seq):
+        for n in seq:
+            pitch, duration_ms, _velocity = n
+            # Force velocity to 127 for maximum volume
+            osc_client.send_message("/midi/ai_answer", [int(pitch), 127, int(duration_ms)])
+            time.sleep(duration_ms / 1000.0)
+    
     try:
         with sd.InputStream(device=device_idx, channels=2, samplerate=samplerate, 
                             blocksize=blocksize, callback=audio_callback):
@@ -153,8 +166,11 @@ def main():
                 # Note transition logic
                 if raw_pitch != active_pitch:
                     if active_pitch > 0:
+                        # Turn off previous note in visualizer
+                        osc_client.send_message("/midi/live_pitch", [int(active_pitch), 0])
+                        
                         # Note ended, build tuple and add to segmenter
-                        note_tuple = (active_pitch, active_duration_ms, 100)
+                        note_tuple = (active_pitch, active_duration_ms, 127)
                         
                         # Store reference before add_note clears it
                         completed_phrase = segmenter.current_phrase.copy() + [note_tuple]
@@ -167,14 +183,8 @@ def main():
                             # Generation
                             response_sequence = markov_model.generate_continuation(completed_phrase)
                             
-                            def play_melody(seq):
-                                for n in seq:
-                                    pitch, duration_ms, _velocity = n
-                                    osc_client.send_message("/midi/ai_answer", [pitch, 0])
-                                    time.sleep(duration_ms / 1000.0)
-                            
+                            # Trigger background playback thread
                             threading.Thread(target=play_melody, args=(response_sequence,), daemon=True).start()
-                            
                             print(f"[VMM] Generated {len(response_sequence)} response notes.")
                             
                             # Database Save
@@ -189,6 +199,10 @@ def main():
                                 db_session.commit()
                                 print(f"[DB] Saved phrase to session '{args.learn_as}'")
                                 
+                    if raw_pitch > 0:
+                        # Turn on new note in visualizer
+                        osc_client.send_message("/midi/live_pitch", [int(raw_pitch), 127])
+                    
                     active_pitch = raw_pitch
                     active_duration_ms = int(args.buffer_ms)
                     silence_duration_ms = 0
@@ -201,9 +215,14 @@ def main():
                         if silence_duration_ms > segmenter.silence_threshold_ms and len(segmenter.current_phrase) > 0:
                             completed_phrase = segmenter.current_phrase.copy()
                             print(f"\n[LBDM] Acoustic silence boundary. Phrase length: {len(completed_phrase)}")
+                            
+                            # Generation
                             response_sequence = markov_model.generate_continuation(completed_phrase)
-                            for i, note in enumerate(response_sequence):
-                                osc_client.send_message("/midi/ai_answer", [note[0], i])
+                            
+                            # Trigger background playback thread
+                            threading.Thread(target=play_melody, args=(response_sequence,), daemon=True).start()
+                            print(f"[VMM] Generated {len(response_sequence)} response notes.")
+                            
                             segmenter.current_phrase.clear()
                             silence_duration_ms = 0
 
